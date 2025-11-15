@@ -38,11 +38,16 @@ import { UsersModule } from './users/users.module';
         // en la BD basándose en las entidades.
         // ¡ADVERTENCIA: Úsalo solo en desarrollo! En producción se usan "migraciones".
         synchronize: true,
+        /**
+         * 'logging: true' le dice a TypeORM que imprima en la consola
+         * todas las consultas SQL que está ejecutando.
+         * Es extremadamente útil para depurar.
+         */
+        logging: true,
       }),
     }),
-
+    //LOS MÓDULOS AQUÍ
     AuthModule,
-
     UsersModule,
   ],
   controllers: [AppController], // El controlador por defecto (podemos borrarlo después)

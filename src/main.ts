@@ -1,8 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ConfigService } from '@nestjs/config';
 
 /**
  * El "bootstrap" es la función que inicializa y arranca nuestra aplicación NestJS.
@@ -47,15 +46,12 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   // La documentación estará disponible en la ruta /api-docs
-  SwaggerModule.setup('api-docs', app, document);
+  SwaggerModule.setup('api-docs', app, document, {
+    useGlobalPrefix: false, // pon true si quieres /api/v1/api-docs
+  });
 
-  // 6. Obtenemos el puerto desde las variables de entorno (.env)
-  const configService = app.get(ConfigService);
-  const port = configService.get<number>('PORT') || 3000;
-
+  await app.listen(3000);
   // 7. Iniciamos la aplicación
-  await app.listen(port);
-  console.log(`🚀 Aplicación corriendo en: ${await app.getUrl()}/api/v1`);
-  console.log(`📄 Documentación (Swagger) en: ${await app.getUrl()}/api-docs`);
+  Logger.log('📄 Documentación (Swagger): http://localhost:3000/api-docs');
 }
 bootstrap();
