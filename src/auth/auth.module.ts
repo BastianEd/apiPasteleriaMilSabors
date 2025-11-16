@@ -1,52 +1,58 @@
 import { Module } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { AuthController } from './auth.controller';
-import { UsersModule } from 'src/users/users.module';
+import { JwtModule, JwtModuleOptions, JwtSignOptions} from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { JwtModule, JwtSignOptions } from '@nestjs/jwt';
+import { UsersModule } from 'src/users/users.module';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { LocalStrategy } from './strategies/local.strategy';
-import { JwtStrategy } from './strategies/jwt.strategy';
 
-/**
- * AuthModule
- *
- * Este módulo se encarga de todo lo relacionado con la autenticación:
- * Login, Registro y la generación/validación de JSON Web Tokens (JWT).
- */
 @Module({
   imports: [
-    // 1. Importamos UsersModule para tener acceso a UsersService,
-    // que usaremos para buscar y crear usuarios en la BD.
+    // Importamos UsersModule para poder usar UsersService en AuthService
     UsersModule,
 
-    // 2. Configuramos Passport, la librería principal para manejar
-    // las "estrategias" de autenticación.
-    PassportModule.register({ defaultStrategy: 'jwt' }),
+    // PassportModule sigue siendo necesario como base para los Guards
+    PassportModule,
 
-    // 3. Configuramos JwtModule de forma asíncrona (registerAsync)
-    // Esto nos permite leer las variables de entorno (.env)
-    // que cargamos en AppModule.
+    // Usamos registerAsync para cargar la configuración de forma asíncrona
     JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const secret = configService.getOrThrow<string>('JWT_SECRET');
+      // Hacemos el módulo JWT global para no tener que importarlo
+      // en otros módulos si quisiéramos usar JwtService
+      global: true,
+      imports: [ConfigModule], // Necesitamos ConfigModule para leer el .env
+      inject: [ConfigService], // Inyectamos el ConfigService
 
-        // Tipado correcto: number | StringValue (e.g. 3600, "15m", "1h")
-        const expiresIn =
-          configService.get<JwtSignOptions['expiresIn']>('JWT_EXPIRES_IN');
+      // Definimos el tipo de retorno de la función
+      useFactory: async (
+        configService: ConfigService,
+      ): Promise<JwtModuleOptions> => {
+        const secret = configService.get<string>('JWT_SECRET');
+        if (!secret) {
+          throw new Error('JWT_SECRET no está definido en el archivo .env');
+        }
+
+        // --- 2. ESTA ES LA LÍNEA CORREGIDA ---
+        // Le decimos a get() que el tipo que esperamos es el mismo que
+        // 'expiresIn' espera en JwtSignOptions.
+        // También mantenemos el valor por defecto '1d'.
+        const expiresIn = configService.get<JwtSignOptions['expiresIn']>(
+          'JWT_EXPIRES_IN',
+          '1d',
+        );
 
         return {
-          secret,
-          signOptions: { expiresIn },
+          secret: secret,
+          signOptions: {
+            expiresIn: expiresIn, // Ahora el tipo coincide perfectamente
+          },
         };
       },
     }),
   ],
-  // Los Controladores y Servicios que generamos con el CLI
   controllers: [AuthController],
-  providers: [AuthService, LocalStrategy, JwtStrategy],
-  exports: [AuthService], // Añadiremos las Estrategias aquí en el siguiente paso
+  // Declaramos AuthService como provider.
+  // Ya NO necesitamos LocalStrategy ni JwtStrategy.
+  providers: [AuthService],
+  exports: [AuthService],
 })
 export class AuthModule {}

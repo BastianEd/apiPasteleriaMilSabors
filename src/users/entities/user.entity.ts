@@ -4,44 +4,43 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  BeforeInsert,
+  DeleteDateColumn,
 } from 'typeorm';
-import * as bcrypt from 'bcrypt';
 
 /**
- * Entidad 'User'
- *
- * Esta clase representa la tabla 'users' en nuestra base de datos MySQL.
- * TypeORM usará esta definición para crear la tabla (gracias a 'synchronize: true')
- * y para realizar todas las consultas (CRUD).
+ * Entidad 'User'.
+ * Define la estructura de la tabla 'users' en la base de datos.
+ * TypeORM usa esta clase para saber cómo mapear los datos.
  */
-@Entity('users') // Especifica el nombre de la tabla en la BD
+@Entity('users') // Nombre de la tabla en la BD
 export class User {
   /**
-   * Identificador único del usuario (UUID).
-   * Es la clave primaria, generada automáticamente.
+   * Clave primaria.
+   * @PrimaryGeneratedColumn le dice a TypeORM que es un ID numérico
+   * que se auto-incrementa.
    */
   @PrimaryGeneratedColumn('uuid')
-  id: number;
+  id: string;
 
   /**
-   * Nombre completo del usuario.
+   * Nombre del usuario.
+   * Usamos @Column para definirla como una columna de texto.
    */
-  @Column('varchar', { length: 255 })
-  nombre: string;
+  @Column('varchar', { length: 100 })
+  name: string;
 
   /**
    * Email del usuario.
-   * Debe ser único, no puede haber dos usuarios con el mismo email.
+   * 'unique: true' asegura que no puedan existir dos usuarios con el mismo email.
+   * 'nullable: false' significa que este campo es obligatorio.
    */
   @Column('varchar', { length: 255, unique: true })
   email: string;
 
   /**
    * Contraseña del usuario.
-   * 'select: false' es una medida de seguridad MUY IMPORTANTE.
-   * Evita que la contraseña sea enviada por defecto en las consultas (ej. un findOne).
-   * Tendremos que pedirla explícitamente solo cuando la necesitemos (para el login).
+   * 'nullable: false' la hace obligatoria.
+   * Aquí guardaremos el HASH de la contraseña, no el texto plano.
    */
   @Column('varchar', { length: 255, select: false })
   password: string;
@@ -49,50 +48,36 @@ export class User {
   /**
    * Fecha de nacimiento del usuario, guardada como string (YYYY-MM-DD).
    */
-  @Column('varchar', { length: 10 })
-  fechaNacimiento: string;
+  @Column('date', { name: 'fecha_nacimiento' })
+  fechaNacimiento: Date;
 
   /**
-   * Rol del usuario (ej: 'admin', 'client').
-   * 'default: "client"' asegura que todos los nuevos usuarios sean clientes
-   * a menos que se especifique lo contrario.
+   * Rol del usuario.
+   * 'default: 'user'' asigna este valor automáticamente si no se provee otro.
+   * Útil para diferenciar administradores de clientes.
    */
-  @Column('varchar', { length: 50, default: 'client' })
-  role: string;
+  @Column({ default: 'user' })
+  rol: string;
 
   /**
-   * Columna especial de TypeORM.
-   * Registra automáticamente la fecha y hora de creación.
+   * Fecha de creación.
+   * @CreateDateColumn se actualiza automáticamente solo cuando se crea el registro.
    */
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
   /**
-   * Columna especial de TypeORM.
-   * Registra automáticamente la fecha y hora de la última actualización.
+   * Fecha de última actualización.
+   * @UpdateDateColumn se actualiza automáticamente cada vez que se guarda (update) el registro.
    */
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
   /**
-   * Hook de TypeORM (@BeforeInsert).
-   * Esta función se ejecutará automáticamente ANTES de que un nuevo
-   * usuario sea insertado en la base de datos.
-   * Usamos 'bcrypt' para "hashear" la contraseña.
+   * Fecha de "borrado lógico" (soft delete).
+   * @DeleteDateColumn se usa para el borrado suave. Cuando se llama a .softDelete(),
+   * TypeORM no borra el registro, sino que pone la fecha actual en esta columna.
    */
-  @BeforeInsert()
-  async hashPassword() {
-    // Generamos un "salt" (aleatoriedad) y hasheamos la contraseña
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-  }
-
-  /**
-   * Método de ayuda para comparar la contraseña enviada (en texto plano)
-   * con la contraseña hasheada que está en la base de datos.
-   * @param plainPassword - La contraseña sin hashear (ej: "123456")
-   */
-  async validatePassword(plainPassword: string): Promise<boolean> {
-    return bcrypt.compare(plainPassword, this.password);
-  }
+  @DeleteDateColumn({ name: 'deleted_at' })
+  deletedAt: Date;
 }

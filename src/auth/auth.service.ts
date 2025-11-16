@@ -1,109 +1,93 @@
 import {
-  ConflictException,
   Injectable,
-  InternalServerErrorException,
+  BadRequestException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { UsersService } from 'src/users/users.service';
-import { RegisterAuthDto } from './dto/register-auth.dto';
-import { LoginAuthDto } from './dto/login-auth.dto';
 import { JwtService } from '@nestjs/jwt';
+import * as bcryptjs from 'bcryptjs'; // Usamos bcryptjs
+import { UsersService } from 'src/users/users.service';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
 
-/**
- * AuthService
- *
- * Contiene la lógica de negocio principal para el registro,
- * validación (login) y creación de tokens.
- */
 @Injectable()
 export class AuthService {
-  /**
-   * Inyectamos los servicios que necesitamos:
-   * - UsersService: Para interactuar con la BD de usuarios.
-   * - JwtService: Para crear los JSON Web Tokens.
-   */
   constructor(
+    // Inyectamos el servicio de usuarios para buscar/crear usuarios
     private readonly usersService: UsersService,
+    // Inyectamos el servicio JWT para firmar tokens
     private readonly jwtService: JwtService,
   ) {}
 
   /**
-   * Lógica de Registro de Usuario.
-   * @param registerDto - Datos del nuevo usuario.
+   * Maneja el registro de un nuevo usuario.
    */
-  async register(registerDto: RegisterAuthDto) {
-    // 1. Verificamos si el email ya existe
-    const userExists = await this.usersService.findOneByEmail(registerDto.email);
-    if (userExists) {
-      // Si existe, lanzamos un error de "Conflicto" (409)
-      throw new ConflictException('El email ya está registrado');
-    }
-
-    try {
-      // 2. Si no existe, creamos el nuevo usuario
-      const user = await this.usersService.create(registerDto);
-
-      // 3. Una vez creado, generamos su token (lo logueamos)
-      return this.generateJwt(user.id, user.email, user.role);
-    } catch (error) {
-      // Manejamos cualquier error inesperado de la BD
-      throw new InternalServerErrorException(
-        'Error al crear el usuario',
-        error.message,
-      );
-    }
-  }
-
-  /**
-   * Lógica de Validación de Usuario (para Login).
-   * Este método es usado por la 'LocalStrategy'.
-   * @param email - Email del usuario.
-   * @param pass - Contraseña en texto plano.
-   */
-  async validateUser(email: string, pass: string): Promise<any> {
-    // 1. Buscamos al usuario por email (pidiendo la contraseña)
+  async register({ password, email, name }: RegisterDto) {
+    // 1. Verificar si el email ya existe
     const user = await this.usersService.findOneByEmail(email);
-
-    // 2. Si no encontramos usuario O la contraseña no coincide...
-    // (Usamos el método 'validatePassword' que creamos en la entidad User)
-    if (!user || !(await user.validatePassword(pass))) {
-      return null; // Devolvemos null y la LocalStrategy lanzará UnauthorizedException
+    if (user) {
+      throw new BadRequestException('El email ya existe');
     }
 
-    // 3. Si todo es correcto, devolvemos el usuario (sin el password)
-    const { password, ...result } = user;
-    return result;
+    // 2. Hashear la contraseña (NUNCA guardarla en texto plano)
+    // Esto lo hacías en la entidad, ahora lo hacemos aquí.
+    const hashedPassword = await bcryptjs.hash(password, 10);
+
+    // 3. Crear el usuario en la base de datos
+    // Pasamos los datos al servicio de usuarios, ya con la pass hasheada.
+    await this.usersService.create({
+      name,
+      email,
+      password: hashedPassword,
+      fechaNacimiento: new Date(),
+    });
+
+    // 4. Devolvemos una respuesta simple.
+    // Podríamos también loguearlo y devolver un token aquí si quisiéramos.
+    return {
+      message: 'Usuario creado exitosamente',
+    };
   }
 
   /**
-   * Lógica de Login (Generación de Token).
-   * Este método es llamado por el AuthController *después* de que
-   * la LocalStrategy (validateUser) ha sido exitosa.
-   * @param user - El objeto usuario validado (devuelto por LocalStrategy).
+   * Maneja el login y la generación del token.
    */
-  async login(user: any) {
-    // El usuario ya fue validado, solo necesitamos generar el token.
-    return this.generateJwt(user.id, user.email, user.role);
-  }
+  async login({ email, password }: LoginDto) {
+    // 1. Buscar al usuario por email
+    const user = await this.usersService.findOneByEmail(email);
+    if (!user) {
+      // Usamos UnauthorizedException para credenciales incorrectas (Error 401)
+      throw new UnauthorizedException('Email o contraseña inválidos');
+    }
 
-  /**
-   * Función helper privada para generar el JWT.
-   */
-  private generateJwt(userId: number, email: string, role: string) {
-    // El "payload" es la información que guardaremos dentro del token.
-    // NUNCA guardes contraseñas aquí.
+    // 2. Comparar la contraseña enviada (plana) con el hash guardado (hasheada)
+    // Esto lo hacías en el método user.validatePassword(), ahora lo hacemos aquí.
+    const isPasswordValid = await bcryptjs.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Email o contraseña inválidos');
+    }
+
+    // 3. Generar el Payload del JWT (datos que queremos en el token)
+    // No incluyas información sensible aquí (como la contraseña)
     const payload = {
-      sub: userId, // 'sub' (subject) es el estándar para el ID de usuario
-      email: email,
-      role: role,
+      sub: user.id, // 'sub' (subject) es el estándar para el ID de usuario
+      email: user.email,
+      name: user.name,
+      fechaNacimiento: user.fechaNacimiento,
+      rol: user.rol, // Incluimos el rol, muy útil en el frontend
     };
 
-    // Firmamos el token usando el secreto y la expiración del .env
-    const accessToken = this.jwtService.sign(payload);
+    // 4. Firmar el token
+    const token = await this.jwtService.signAsync(payload);
 
+    // 5. Devolver el token e información útil al frontend
     return {
-      accessToken,
-      user: payload,
+      access_token: token,
+      user: {
+        email: user.email,
+        name: user.name,
+        fechaNacimiento: user.fechaNacimiento,
+        rol: user.rol,
+      },
     };
   }
 }

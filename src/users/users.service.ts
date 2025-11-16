@@ -1,70 +1,63 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
-import { RegisterAuthDto } from 'src/auth/dto/register-auth.dto';
+import { CreateUserDto } from './dto/create-user.dto'; // Importamos el DTO
 
 /**
  * UsersService
- *
- * Este servicio encapsula toda la lógica de negocio relacionada
- * con la entidad 'User'. Es el único lugar que debe interactuar
- * directamente con el repositorio de usuarios.
+ * Encargado de la lógica de negocio y la comunicación con
+ * la base de datos para la entidad 'User'.
  */
 @Injectable()
 export class UsersService {
-  /**
-   * Inyectamos el Repositorio de 'User'.
-   * 'InjectRepository' es la forma en que TypeORM nos da acceso
-   * a los métodos de la base de datos (find, create, save, etc.)
-   * para la entidad 'User'.
-   */
   constructor(
+    /**
+     * Inyectamos el Repositorio de User.
+     * @InjectRepository(User) le da a 'usersRepository'
+     * todos los métodos para interactuar con la tabla 'users' (find, save, create, etc.).
+     */
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    private readonly usersRepository: Repository<User>,
   ) {}
 
   /**
    * Crea un nuevo usuario en la base de datos.
-   * Este método es usado por el 'AuthService' durante el registro.
-   * @param registerAuthDto - Los datos validados para crear el usuario.
+   * Usado por el AuthService durante el registro.
+   * @param createUserDto Los datos del usuario a crear.
    */
-  async create(registerAuthDto: RegisterAuthDto): Promise<User> {
-    // Creamos una instancia de la entidad User con los datos del DTO
-    const user = this.userRepository.create(registerAuthDto);
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    // 1. Creamos una instancia de la entidad con los datos del DTO.
+    const user = this.usersRepository.create(createUserDto);
 
-    // Guardamos el usuario.
-    // NOTA: El hasheo de la contraseña ocurre automáticamente
-    // gracias al hook @BeforeInsert que definimos en la entidad User.
-    return this.userRepository.save(user);
+    // 2. Guardamos la entidad en la base de datos.
+    // NOTA: El hashing de la contraseña se hará en AuthService *antes* de llamar a este método.
+    return await this.usersRepository.save(user);
   }
 
   /**
    * Busca un usuario por su email.
-   * Este método es crucial para el login, para verificar si el usuario existe.
-   * @param email - El email del usuario a buscar.
+   * Es vital para el login y para verificar si un email ya existe.
+   * @param email El email a buscar.
    */
   async findOneByEmail(email: string): Promise<User | null> {
-    // Usamos 'createQueryBuilder' para poder pedir explícitamente
-    // la columna 'password', que marcamos con 'select: false' en la entidad.
-    return this.userRepository
-      .createQueryBuilder('user') // 'user' es un alias para la tabla User
-      .where('user.email = :email', { email }) // :email es un parámetro
-      .addSelect('user.password') // ¡Importante! Pedimos la contraseña
-      .getOne(); // Obtenemos un solo resultado (o null)
+    // findOneBy es un atajo de TypeORM para buscar un registro
+    // que coincida con el criterio (en este caso, el email).
+    return await this.usersRepository.findOneBy({ email });
   }
 
   /**
    * Busca un usuario por su ID.
-   * Este método será usado por la estrategia de JWT para
-   * validar el token en cada petición protegida.
-   * @param id - El UUID del usuario a buscar.
+   * Útil para el endpoint de 'profile' y para la validación del AuthGuard.
+   * @param id El ID numérico del usuario.
    */
-  async findOneById(id: number): Promise<User | null> {
-    // findOneBy es un atajo simple para buscar por una columna
-    return this.userRepository.findOneBy({ id });
-  }
+  async findOneById(id: string): Promise<User> {
+    const user = await this.usersRepository.findOneBy({ id });
 
-  // Aquí irían otros métodos del CRUD si los necesitáramos (findAll, update, remove)
-  // que serían usados por el UsersController.
+    // Si no encontramos al usuario, lanzamos un error 404.
+    if (!user) {
+      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+    }
+    return user;
+  }
 }
