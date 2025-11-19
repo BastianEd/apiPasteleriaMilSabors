@@ -2,7 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
-import { CreateUserDto } from './dto/create-user.dto'; // Importamos el DTO
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto'; // Importamos el DTO
 
 /**
  * UsersService
@@ -43,7 +44,11 @@ export class UsersService {
   async findOneByEmail(email: string): Promise<User | null> {
     // findOneBy es un atajo de TypeORM para buscar un registro
     // que coincida con el criterio (en este caso, el email).
-    return await this.usersRepository.findOneBy({ email });
+    return await this.usersRepository
+      .createQueryBuilder('user') // 'user' es el alias de la tabla
+      .where('user.email = :email', { email }) // Filtramos por email
+      .addSelect('user.password') // ¡Pedimos la contraseña explícitamente!
+      .getOne(); // Obtenemos un solo resultado
   }
 
   /**
@@ -59,5 +64,38 @@ export class UsersService {
       throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
     }
     return user;
+  }
+
+  /**
+   * Lista todos los usuarios.
+   */
+  async findAll(): Promise<User[]> {
+    return await this.usersRepository.find();
+  }
+
+  /**
+   * Actualiza un usuario existente.
+   * Primero verificamos que exista, luego actualizamos.
+   */
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+    // Preload busca una entidad por ID y reemplaza los campos con los del DTO
+    const user = await this.usersRepository.preload({
+      id: id,
+      ...updateUserDto,
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+    }
+
+    return await this.usersRepository.save(user);
+  }
+
+  /**
+   * Elimina un usuario (Borrado lógico recomendado por tu entidad que tiene deletedAt).
+   */
+  async remove(id: string): Promise<void> {
+    const user = await this.findOneById(id); // Reutilizamos tu método que ya valida si existe
+    await this.usersRepository.softRemove(user); // softRemove llena el campo deletedAt
   }
 }
