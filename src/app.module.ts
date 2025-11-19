@@ -5,6 +5,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { ProductsModule } from './products/products.module';
+import { PostsModule } from './posts/posts.module';
+import { OrdersModule } from './orders/orders.module';
+import { ContactModule } from './contact/contact.module';
 
 /**
  * El AppModule es el módulo raíz de la aplicación.
@@ -49,6 +53,10 @@ import { UsersModule } from './users/users.module';
     //LOS MÓDULOS AQUÍ
     AuthModule,
     UsersModule,
+    ProductsModule,
+    PostsModule,
+    OrdersModule,
+    ContactModule,
   ],
   controllers: [AppController], // El controlador por defecto (podemos borrarlo después)
   providers: [AppService], // El servicio por defecto (podemos borrarlo después)
