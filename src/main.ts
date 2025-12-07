@@ -13,7 +13,11 @@ async function bootstrap() {
   // 2. Habilitamos CORS (Cross-Origin Resource Sharing)
   // Esto es VITAL para permitir que tu frontend (React) se comunique
   // con este backend, ya que estarán en dominios/puertos diferentes.
-  app.enableCors();
+  app.enableCors({
+    origin: 'http://localhost:5173', // O el puerto donde corra tu React Router
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true, // Permite enviar cookies/headers de autorización
+  });
 
   // 3. Establecemos un prefijo global para todas las rutas
   // Ahora, todas las rutas de la API empezarán con /api/v1
