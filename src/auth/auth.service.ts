@@ -50,39 +50,40 @@ export class AuthService {
 
   /**
    * Maneja el login y la generación del token.
+   * Nivel de documentación: Senior
+   * Se ajusta el retorno para incluir el ID del usuario explícitamente,
+   * facilitando la persistencia del estado en el cliente (Frontend).
    */
   async login({ email, password }: LoginDto) {
     // 1. Buscar al usuario por email
     const user = await this.usersService.findOneByEmail(email);
     if (!user) {
-      // Usamos UnauthorizedException para credenciales incorrectas (Error 401)
       throw new UnauthorizedException('Email o contraseña inválidos');
     }
 
-    // 2. Comparar la contraseña enviada (plana) con el hash guardado (hasheada)
-    // Esto lo hacías en el método user.validatePassword(), ahora lo hacemos aquí.
+    // 2. Validar contraseña
     const isPasswordValid = await bcryptjs.compare(password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Email o contraseña inválidos');
     }
 
-    // 3. Generar el Payload del JWT (datos que queremos en el token)
-    // No incluyas información sensible aquí (como la contraseña)
+    // 3. Generar Payload
     const payload = {
-      sub: user.id, // 'sub' (subject) es el estándar para el ID de usuario
+      sub: user.id,
       email: user.email,
       name: user.name,
       fechaNacimiento: user.fechaNacimiento,
-      rol: user.rol, // Incluimos el rol, muy útil en el frontend
+      rol: user.rol,
     };
 
-    // 4. Firmar el token
     const token = await this.jwtService.signAsync(payload);
 
-    // 5. Devolver el token e información útil al frontend
+    // 4. Devolver respuesta al Frontend
+    // AGREGAMOS 'id: user.id' AQUÍ ABAJO 👇
     return {
       access_token: token,
       user: {
+        id: user.id, // <--- ¡NUEVO! Vital para el frontend
         email: user.email,
         name: user.name,
         fechaNacimiento: user.fechaNacimiento,
