@@ -9,6 +9,8 @@ import { ProductsModule } from './products/products.module';
 import { PostsModule } from './posts/posts.module';
 import { OrdersModule } from './orders/orders.module';
 import { ContactModule } from './contact/contact.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 /**
  * El AppModule es el módulo raíz de la aplicación.
@@ -16,12 +18,18 @@ import { ContactModule } from './contact/contact.module';
  */
 @Module({
   imports: [
-    // 1. ConfigModule: Para cargar y gestionar las variables de entorno (.env)
+    // ConfigModule: Para cargar y gestionar las variables de entorno (.env)
     ConfigModule.forRoot({
       isGlobal: true, // Hace que las variables de entorno estén disponibles en toda la app
     }),
 
-    // 2. TypeOrmModule: Para la conexión con la base de datos (MySQL)
+    // Configuración para servir imágenes estáticas
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public'), // Apunta a la carpeta public
+      serveRoot: '/static', // Prefijo URL (ej: http://localhost:3000/static/products/foto.webp)
+    }),
+
+    // TypeOrmModule: Para la conexión con la base de datos (MySQL)
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule], // Importamos ConfigModule para usar ConfigService
       inject: [ConfigService], // Inyectamos el servicio para leer las variables
