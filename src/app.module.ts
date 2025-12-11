@@ -11,6 +11,7 @@ import { OrdersModule } from './orders/orders.module';
 import { ContactModule } from './contact/contact.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { DatabaseModule } from './database/database.module'; // [MODIFICADO]: Importar DatabaseModule
 
 /**
  * El AppModule es el módulo raíz de la aplicación.
@@ -65,6 +66,7 @@ import { join } from 'path';
     PostsModule,
     OrdersModule,
     ContactModule,
+    DatabaseModule,
   ],
   controllers: [AppController], // El controlador por defecto (podemos borrarlo después)
   providers: [AppService], // El servicio por defecto (podemos borrarlo después)
