@@ -25,27 +25,32 @@ Backend desarrollado en **NestJS** para la gestión de la Pastelería Mil Sabore
     npm install
     ```
 
-   2.  **Configurar Variables de Entorno:**
-       Crea un archivo `.env` en la raíz del proyecto (puedes copiar este bloque):
+2.  **Creacion de base de dato:**
+    ```
+    CREATE DATABASE pasteleria_db;
+    ```
 
-       ```env
-       # --- Configuración de la Base de Datos ---
-       # Ajusta esto según tu configuración de Laragon/MySQL
-       DB_TYPE=mysql
-       DB_HOST=localhost
-       DB_PORT=3306
-       DB_USERNAME=root
-       DB_PASSWORD=            # Pon tu clave si tienes una, si no, déjalo vacío
-       DB_DATABASE=pasteleria_db # Tendrás que crear esta base de datos en Laragon
+3.  **Configurar Variables de Entorno:**
+    Crea un archivo `.env` en la raíz del proyecto (puedes copiar este bloque):
+
+    ```env
+    # --- Configuración de la Base de Datos ---
+    # Ajusta esto según tu configuración de Laragon/MySQL
+    DB_TYPE=mysql
+    DB_HOST=localhost
+    DB_PORT=3306
+    DB_USERNAME=root
+    DB_PASSWORD=            # Pon tu clave si tienes una, si no, déjalo vacío
+    DB_DATABASE=pasteleria_db # Tendrás que crear esta base de datos en Laragon
     
-       # --- Configuración de JWT (Json Web Token) ---
-           # Clave Super Secreta para JWT
-       JWT_SECRET=chupaelperro1234$
-       # Tiempo de expiración del token
-       JWT_EXPIRES_IN= 1d
-       ```
+    # --- Configuración de JWT (Json Web Token) ---
+        # Clave Super Secreta para JWT
+    JWT_SECRET=chupaelperro1234$
+    # Tiempo de expiración del token
+    JWT_EXPIRES_IN= 1d
+    ```
 
-3.  **Levantar el entorno de desarrollo:**
+4.  **Levantar el entorno de desarrollo:**
 
     ```bash
     # Esto iniciará el servidor y creará las tablas automáticamente (synchronize: true)
