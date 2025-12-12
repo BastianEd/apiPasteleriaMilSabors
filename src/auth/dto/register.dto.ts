@@ -1,6 +1,14 @@
-import { IsEmail, IsString, MinLength, IsDate } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  MinLength,
+  IsDate,
+  IsOptional,
+  IsEnum,
+} from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+import { Role } from '../../common/enums/role.enum';
 
 /**
  * DTO para el Registro.
@@ -42,4 +50,9 @@ export class RegisterDto {
   @Type(() => Date)
   @IsDate()
   fechaNacimiento: Date;
+
+  @ApiProperty({ example: 'admin', enum: Role, required: false })
+  @IsOptional()
+  @IsEnum(Role)
+  rol?: Role;
 }

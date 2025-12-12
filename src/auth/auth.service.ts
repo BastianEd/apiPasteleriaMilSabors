@@ -21,7 +21,7 @@ export class AuthService {
   /**
    * Maneja el registro de un nuevo usuario.
    */
-  async register({ password, email, name, fechaNacimiento }: RegisterDto) {
+  async register({ password, email, name, fechaNacimiento, rol }: RegisterDto) {
     // 1. Verificar si el email ya existe
     const user = await this.usersService.findOneByEmail(email);
     if (user) {
@@ -37,7 +37,8 @@ export class AuthService {
       name,
       email,
       password: hashedPassword,
-      fechaNacimiento: fechaNacimiento,
+      fechaNacimiento,
+      rol,
     });
 
     // 4. Devolvemos una respuesta simple.

@@ -1,5 +1,13 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, IsDate } from 'class-validator';
-
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+  IsDate,
+  IsOptional,
+  IsEnum,
+} from 'class-validator';
+import { Role } from '../../common/enums/role.enum';
 /**
  * DTO (Objeto de Transferencia de Datos) para crear un Usuario.
  * Define la forma de los datos que el UsersService espera.
@@ -24,6 +32,7 @@ export class CreateUserDto {
   @IsDate()
   fechaNacimiento: Date;
 
-  // El 'rol' se asigna con un valor por defecto en la entidad,
-  // por lo que no es necesario pedirlo aquí.
+  @IsOptional()
+  @IsEnum(Role)
+  rol?: Role;
 }

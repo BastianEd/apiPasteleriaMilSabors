@@ -19,7 +19,7 @@ export class CreateProductDto {
     description: 'Nombre comercial',
   })
   @IsString()
-  @MinLength(3)
+  @MinLength(1)
   nombre: string;
 
   @ApiProperty({ example: 'Tortas', description: 'Categoría del producto' })
