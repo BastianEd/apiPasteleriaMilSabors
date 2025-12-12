@@ -21,7 +21,7 @@ export class AuthService {
   /**
    * Maneja el registro de un nuevo usuario.
    */
-  async register({ password, email, name }: RegisterDto) {
+  async register({ password, email, name, fechaNacimiento }: RegisterDto) {
     // 1. Verificar si el email ya existe
     const user = await this.usersService.findOneByEmail(email);
     if (user) {
@@ -29,20 +29,18 @@ export class AuthService {
     }
 
     // 2. Hashear la contraseña (NUNCA guardarla en texto plano)
-    // Esto lo hacías en la entidad, ahora lo hacemos aquí.
     const hashedPassword = await bcryptjs.hash(password, 10);
 
     // 3. Crear el usuario en la base de datos
-    // Pasamos los datos al servicio de usuarios, ya con la pass hasheada.
+    // CORRECCIÓN: Pasamos 'fechaNacimiento' que viene del DTO, no 'new Date()'
     await this.usersService.create({
       name,
       email,
       password: hashedPassword,
-      fechaNacimiento: new Date(),
+      fechaNacimiento: fechaNacimiento,
     });
 
     // 4. Devolvemos una respuesta simple.
-    // Podríamos también loguearlo y devolver un token aquí si quisiéramos.
     return {
       message: 'Usuario creado exitosamente',
     };
@@ -50,9 +48,7 @@ export class AuthService {
 
   /**
    * Maneja el login y la generación del token.
-   * Nivel de documentación: Senior
-   * Se ajusta el retorno para incluir el ID del usuario explícitamente,
-   * facilitando la persistencia del estado en el cliente (Frontend).
+   * Se incluye el ID y ROL en el retorno para gestión de estado en Frontend.
    */
   async login({ email, password }: LoginDto) {
     // 1. Buscar al usuario por email
@@ -67,7 +63,7 @@ export class AuthService {
       throw new UnauthorizedException('Email o contraseña inválidos');
     }
 
-    // 3. Generar Payload
+    // 3. Generar Payload para el JWT
     const payload = {
       sub: user.id,
       email: user.email,
@@ -79,11 +75,11 @@ export class AuthService {
     const token = await this.jwtService.signAsync(payload);
 
     // 4. Devolver respuesta al Frontend
-    // AGREGAMOS 'id: user.id' AQUÍ ABAJO 👇
+    // Importante: Devolver 'user' completo permite al frontend calcular beneficios inmediatamente
     return {
       access_token: token,
       user: {
-        id: user.id, // <--- ¡NUEVO! Vital para el frontend
+        id: user.id,
         email: user.email,
         name: user.name,
         fechaNacimiento: user.fechaNacimiento,
