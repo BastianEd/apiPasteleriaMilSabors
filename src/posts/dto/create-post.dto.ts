@@ -1,6 +1,10 @@
-import { IsString, IsNotEmpty, IsUrl, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
+/**
+ * DTO para la creación de artículos de blog.
+ * Modificado para aceptar Emojis en el campo imagen.
+ */
 export class CreatePostDto {
   @ApiProperty({ example: '5 Tips para hornear mejor' })
   @IsString()
@@ -22,8 +26,12 @@ export class CreatePostDto {
   @IsOptional()
   categoria?: string;
 
-  @ApiProperty({ example: 'https://via.placeholder.com/300' })
-  @IsUrl()
+  // CORRECCIÓN: Eliminado @IsUrl() para permitir Emojis (e.g. "🎂") o URLs
+  @ApiProperty({
+    example: '🎂',
+    description: 'Puede ser una URL de imagen o un Emoji',
+  })
+  @IsString()
   @IsOptional()
   imagen?: string;
 }
